@@ -59,5 +59,14 @@ export function useAutoSave({ submissionId, enabled = true, delay = 2000 }: UseA
     };
   }, [debouncedSave]);
 
-  return { status, trigger, saveNow: saveData };
+  // Flush any pending debounced saves and wait for completion
+  const flush = useCallback(async () => {
+    if (debouncedSave.isPending()) {
+      debouncedSave.flush();
+      // Wait a bit for the save to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }, [debouncedSave]);
+
+  return { status, trigger, saveNow: saveData, flush };
 }

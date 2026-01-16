@@ -59,7 +59,7 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
     },
   });
 
-  const { status: saveStatus, trigger } = useAutoSave({
+  const { status: saveStatus, trigger, flush } = useAutoSave({
     submissionId,
     enabled: isDraft,
   });
@@ -96,6 +96,9 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
   };
 
   const handleSubmitForReview = async () => {
+    // Flush any pending auto-saves first
+    await flush();
+
     const data = form.getValues();
 
     // Validate with full schema for submission
@@ -111,11 +114,15 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
 
     try {
       // First save the current data
-      await fetch(`/api/submissions/${submissionId}`, {
+      const saveResponse = await fetch(`/api/submissions/${submissionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save form data");
+      }
 
       // Then submit for review
       const response = await fetch(`/api/submissions/${submissionId}/submit`, {

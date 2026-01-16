@@ -2,8 +2,6 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { IntakeForm } from "@/components/intake-form/IntakeForm";
 
-const DEMO_USER_EMAIL = "demo@example.com";
-
 interface IntakePageProps {
   params: Promise<{ id: string }>;
 }
@@ -11,20 +9,8 @@ interface IntakePageProps {
 export default async function IntakePage({ params }: IntakePageProps) {
   const { id } = await params;
 
-  // Get the demo user for anonymous access
-  const demoUser = await prisma.user.findUnique({
-    where: { email: DEMO_USER_EMAIL },
-  });
-
-  if (!demoUser) {
-    notFound();
-  }
-
-  const submission = await prisma.aISystemSubmission.findFirst({
-    where: {
-      id,
-      submittedById: demoUser.id,
-    },
+  const submission = await prisma.aISystemSubmission.findUnique({
+    where: { id },
   });
 
   if (!submission) {

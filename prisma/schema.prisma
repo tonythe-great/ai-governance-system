@@ -58,8 +58,8 @@ model AISystemSubmission {
 
   // Metadata
   status                  String    @default("DRAFT")
-  submittedBy             User      @relation(fields: [submittedById], references: [id])
-  submittedById           String
+  submittedBy             User?     @relation(fields: [submittedById], references: [id])
+  submittedById           String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
   submittedAt             DateTime?

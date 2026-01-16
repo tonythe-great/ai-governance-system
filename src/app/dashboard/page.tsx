@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/layout/Footer";
 
-const DEMO_USER_EMAIL = "demo@example.com";
-
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800",
   SUBMITTED: "bg-blue-100 text-blue-800",
@@ -23,26 +21,18 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  // Get the demo user for anonymous access
-  const demoUser = await prisma.user.findUnique({
-    where: { email: DEMO_USER_EMAIL },
+  const submissions = await prisma.aISystemSubmission.findMany({
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      aiSystemName: true,
+      vendor: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      submittedAt: true,
+    },
   });
-
-  const submissions = demoUser
-    ? await prisma.aISystemSubmission.findMany({
-        where: { submittedById: demoUser.id },
-        orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          aiSystemName: true,
-          vendor: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-          submittedAt: true,
-        },
-      })
-    : [];
 
   return (
     <div className="min-h-screen bg-gray-50">

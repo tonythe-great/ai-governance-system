@@ -1,34 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const DEMO_USER_EMAIL = "demo@example.com";
-
-async function getDemoUserId(): Promise<string | null> {
-  const demoUser = await prisma.user.findUnique({
-    where: { email: DEMO_USER_EMAIL },
-    select: { id: true },
-  });
-  return demoUser?.id ?? null;
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await getDemoUserId();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Demo user not found" }, { status: 500 });
-    }
-
     const { id } = await params;
 
-    const submission = await prisma.aISystemSubmission.findFirst({
-      where: {
-        id,
-        submittedById: userId,
-      },
+    const submission = await prisma.aISystemSubmission.findUnique({
+      where: { id },
     });
 
     if (!submission) {
@@ -50,21 +31,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await getDemoUserId();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Demo user not found" }, { status: 500 });
-    }
-
     const { id } = await params;
     const body = await request.json();
 
-    // Verify ownership and draft status
-    const existing = await prisma.aISystemSubmission.findFirst({
-      where: {
-        id,
-        submittedById: userId,
-      },
+    // Verify existence and draft status
+    const existing = await prisma.aISystemSubmission.findUnique({
+      where: { id },
     });
 
     if (!existing) {

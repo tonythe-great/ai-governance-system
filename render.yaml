@@ -1,3 +1,4 @@
+# Redeploy trigger: 2026-01-16 - ensure db seed runs
 databases:
   - name: ai-governance-db
     databaseName: ai_governance

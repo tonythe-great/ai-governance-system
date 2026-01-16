@@ -1,12 +1,10 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/layout/Footer";
-import { SignOutButton } from "./SignOutButton";
+
+const DEMO_USER_EMAIL = "demo@example.com";
 
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800",
@@ -25,25 +23,26 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
-  const submissions = await prisma.aISystemSubmission.findMany({
-    where: { submittedById: session.user.id },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      aiSystemName: true,
-      vendor: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-      submittedAt: true,
-    },
+  // Get the demo user for anonymous access
+  const demoUser = await prisma.user.findUnique({
+    where: { email: DEMO_USER_EMAIL },
   });
+
+  const submissions = demoUser
+    ? await prisma.aISystemSubmission.findMany({
+        where: { submittedById: demoUser.id },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          aiSystemName: true,
+          vendor: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          submittedAt: true,
+        },
+      })
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,10 +72,6 @@ export default async function DashboardPage() {
                 Enterprise Governance Assessment
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{session.user.email}</span>
-            <SignOutButton />
           </div>
         </div>
       </header>

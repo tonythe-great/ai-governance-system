@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { submissionSchema } from "@/lib/validations/submission";
+
+const DEMO_USER_EMAIL = "demo@example.com";
+
+async function getDemoUserId(): Promise<string | null> {
+  const demoUser = await prisma.user.findUnique({
+    where: { email: DEMO_USER_EMAIL },
+    select: { id: true },
+  });
+  return demoUser?.id ?? null;
+}
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const userId = await getDemoUserId();
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "Demo user not found" }, { status: 500 });
     }
 
     const { id } = await params;
@@ -21,7 +29,7 @@ export async function POST(
     const existing = await prisma.aISystemSubmission.findFirst({
       where: {
         id,
-        submittedById: session.user.id,
+        submittedById: userId,
       },
     });
 

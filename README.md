@@ -1,10 +1,13 @@
 # AI Governance System
 
-Enterprise AI System Intake Form for Governance Assessment. Built with Next.js 14, TypeScript, PostgreSQL, and NextAuth.js.
+Enterprise AI System Intake Form for Governance Assessment. Built with Next.js 14, TypeScript, PostgreSQL, and Prisma.
+
+## Live Demo
+
+https://ai-governance-system.onrender.com
 
 ## Features
 
-- User authentication (signup, login, protected routes)
 - AI System Intake Form with 5 sections:
   1. Basic Information
   2. Human Oversight

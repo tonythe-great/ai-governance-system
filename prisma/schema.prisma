@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          String    @default("USER")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  submissions   AISystemSubmission[]
+}
+
+model AISystemSubmission {
+  id                      String    @id @default(cuid())
+
+  // Section 1 - Basic Information
+  aiSystemName            String?
+  useCase                 String?
+  businessPurpose         String?
+  vendor                  String?
+  currentStage            String?
+  numberOfUsers           String?
+
+  // Section 2 - Human Oversight
+  outputUsage             String?
+  humanReviewLevel        String?
+
+  // Section 3 - Data & Privacy
+  dataTypes               String[]  @default([])
+  vendorDataStorage       String?
+  userTrainingRequired    Boolean   @default(false)
+  acceptableUseRequired   Boolean   @default(false)
+
+  // Section 4 - Ownership & Accountability
+  executiveSponsorName    String?
+  executiveSponsorTitle   String?
+  businessOwnerName       String?
+  businessOwnerEmail      String?
+  technicalOwnerName      String?
+  technicalOwnerEmail     String?
+
+  // Section 5 - Compliance & Monitoring
+  hasFederalContracts     String?
+  usageLoggingEnabled     Boolean   @default(false)
+  complianceAccess        Boolean   @default(false)
+  incidentResponseDoc     Boolean   @default(false)
+
+  // Metadata
+  status                  String    @default("DRAFT")
+  submittedBy             User      @relation(fields: [submittedById], references: [id])
+  submittedById           String
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  submittedAt             DateTime?
+
+  @@index([submittedById])
+  @@index([status])
+}
+
+model DropdownOption {
+  id        String   @id @default(cuid())
+  category  String
+  value     String
+  label     String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, value])
+  @@index([category])
+}

@@ -4,7 +4,9 @@ Enterprise AI System Intake Form for Governance Assessment. Built with Next.js 1
 
 ## Live Demo
 
-https://ai-governance-system.onrender.com
+https://ai-governance-system.onrender.com (Website)
+
+https://app.arcade.software/share/3vkoyL0T4BkMB91QQB5E (Interactive Demo)
 
 ## Features
 

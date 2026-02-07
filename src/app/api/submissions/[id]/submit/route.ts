@@ -6,6 +6,7 @@ import { submissionSchema } from "@/lib/validations/submission";
 import { runRiskAssessment } from "@/lib/agents/risk-assessment";
 import { sendEmail, submissionReceivedEmail } from "@/lib/email";
 import { logSubmissionSubmitted } from "@/lib/audit";
+import { calculateDueDate, getPriorityForRiskLevel } from "@/lib/workflow-config";
 
 export async function POST(
   request: Request,
@@ -114,6 +115,27 @@ export async function POST(
       console.error("Risk assessment error (non-blocking):", assessmentError);
       // Don't fail the submission if assessment fails
     }
+
+    // Set up workflow automation based on risk level
+    const riskLevel = assessment?.overallLevel || "MEDIUM";
+    const priority = getPriorityForRiskLevel(riskLevel);
+    const dueDate = calculateDueDate(riskLevel, new Date());
+
+    // Create or update the SubmissionReview with SLA info
+    await prisma.submissionReview.upsert({
+      where: { submissionId: id },
+      create: {
+        submissionId: id,
+        priority,
+        dueDate,
+        escalationLevel: 0,
+      },
+      update: {
+        priority,
+        dueDate,
+        escalationLevel: 0,
+      },
+    });
 
     return NextResponse.json({
       ...submission,

@@ -142,8 +142,12 @@ model SubmissionReview {
   assignedAt      DateTime?
 
   // Review metadata
-  priority        String   @default("NORMAL")
+  priority        String   @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
   dueDate         DateTime?
+
+  // Escalation tracking
+  escalatedAt     DateTime?
+  escalationLevel Int      @default(0)  // 0 = not escalated, 1 = first escalation, 2 = second, etc.
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -154,6 +158,8 @@ model SubmissionReview {
 
   @@index([assignedToId])
   @@index([priority])
+  @@index([dueDate])
+  @@index([escalationLevel])
 }
 
 model ReviewComment {

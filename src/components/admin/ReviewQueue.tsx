@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { SLABadge } from "./SLABadge";
 
 interface Submission {
   id: string;
@@ -17,6 +18,9 @@ interface Submission {
     overallScore: number;
   } | null;
   review: {
+    priority: string;
+    dueDate: Date | null;
+    escalationLevel: number;
     assignedTo: {
       id: string;
       name: string | null;
@@ -96,6 +100,16 @@ export function ReviewQueue({ submissions }: ReviewQueueProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
+                  {submission.review && (
+                    <SLABadge
+                      submittedAt={submission.submittedAt}
+                      dueDate={submission.review.dueDate}
+                      riskLevel={submission.riskAssessment?.overallLevel || null}
+                      escalationLevel={submission.review.escalationLevel}
+                      showPriority
+                      priority={submission.review.priority}
+                    />
+                  )}
                   {submission.review?.assignedTo && (
                     <div className="text-sm text-gray-500">
                       <span className="text-gray-400">Assigned: </span>

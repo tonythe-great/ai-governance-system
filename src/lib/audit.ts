@@ -8,7 +8,8 @@ export type AuditAction =
   | "APPROVED"
   | "REJECTED"
   | "CHANGES_REQUESTED"
-  | "COMMENT_ADDED";
+  | "COMMENT_ADDED"
+  | "ESCALATED";
 
 export type AuditCategory =
   | "LIFECYCLE"

@@ -33,7 +33,11 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
 
   const submissions = await prisma.aISystemSubmission.findMany({
     where: whereClause,
-    orderBy: [{ submittedAt: "asc" }],
+    orderBy: [
+      { review: { priority: "desc" } },
+      { review: { dueDate: "asc" } },
+      { submittedAt: "asc" },
+    ],
     include: {
       submittedBy: {
         select: { id: true, name: true, email: true },
@@ -42,7 +46,10 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
         select: { overallLevel: true, overallScore: true },
       },
       review: {
-        include: {
+        select: {
+          priority: true,
+          dueDate: true,
+          escalationLevel: true,
           assignedTo: {
             select: { id: true, name: true },
           },

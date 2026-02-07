@@ -5,7 +5,8 @@ import Link from "next/link";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ActivityFeed, ActivityItem } from "@/components/dashboard/ActivityFeed";
 import { RiskDistributionChart } from "@/components/charts/RiskDistributionChart";
-import { SubmissionTrendChart, generateTrendData } from "@/components/charts/SubmissionTrendChart";
+import { SubmissionTrendChart } from "@/components/charts/SubmissionTrendChart";
+import { generateTrendData } from "@/lib/chart-utils";
 import { SLABadge } from "@/components/admin/SLABadge";
 import {
   FileText,

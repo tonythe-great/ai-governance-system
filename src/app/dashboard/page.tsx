@@ -1,8 +1,12 @@
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/layout/Footer";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800",
@@ -21,7 +25,16 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const userId = (session.user as { id?: string }).id;
+
   const submissions = await prisma.aISystemSubmission.findMany({
+    where: { submittedById: userId },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -63,6 +76,7 @@ export default async function DashboardPage() {
               </p>
             </div>
           </div>
+          <SignOutButton />
         </div>
       </header>
 

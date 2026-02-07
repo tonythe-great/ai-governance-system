@@ -1,5 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 import { IntakeForm } from "@/components/intake-form/IntakeForm";
 
 interface IntakePageProps {
@@ -7,7 +9,14 @@ interface IntakePageProps {
 }
 
 export default async function IntakePage({ params }: IntakePageProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   const { id } = await params;
+  const userId = (session.user as { id?: string }).id;
 
   const submission = await prisma.aISystemSubmission.findUnique({
     where: { id },
@@ -15,6 +24,10 @@ export default async function IntakePage({ params }: IntakePageProps) {
 
   if (!submission) {
     notFound();
+  }
+
+  if (submission.submittedById !== userId) {
+    redirect("/dashboard");
   }
 
   return (

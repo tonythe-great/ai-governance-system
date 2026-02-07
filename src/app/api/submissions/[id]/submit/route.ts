@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 import { submissionSchema } from "@/lib/validations/submission";
 
 export async function POST(
@@ -7,7 +9,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const userId = (session.user as { id?: string }).id;
 
     // Verify existence and draft status
     const existing = await prisma.aISystemSubmission.findUnique({
@@ -16,6 +25,10 @@ export async function POST(
 
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (existing.submittedById !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (existing.status !== "DRAFT") {

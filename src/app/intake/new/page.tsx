@@ -2,16 +2,32 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function NewIntakePage() {
   const router = useRouter();
+  const { status } = useSession();
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (status !== "authenticated") {
+      return;
+    }
+
     const createSubmission = async () => {
       try {
         const response = await fetch("/api/submissions", {
           method: "POST",
         });
+
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("Failed to create submission");
@@ -26,7 +42,7 @@ export default function NewIntakePage() {
     };
 
     createSubmission();
-  }, [router]);
+  }, [router, status]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

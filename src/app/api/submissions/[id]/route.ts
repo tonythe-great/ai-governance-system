@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const userId = (session.user as { id?: string }).id;
 
     const submission = await prisma.aISystemSubmission.findUnique({
       where: { id },
@@ -14,6 +23,10 @@ export async function GET(
 
     if (!submission) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (submission.submittedById !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json(submission);
@@ -31,7 +44,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const userId = (session.user as { id?: string }).id;
     const body = await request.json();
 
     // Verify existence and draft status
@@ -41,6 +61,10 @@ export async function PATCH(
 
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (existing.submittedById !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (existing.status !== "DRAFT") {

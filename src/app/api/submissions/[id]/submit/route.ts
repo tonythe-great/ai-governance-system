@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { submissionSchema } from "@/lib/validations/submission";
 import { runRiskAssessment } from "@/lib/agents/risk-assessment";
+import { sendEmail, submissionReceivedEmail } from "@/lib/email";
 
 export async function POST(
   request: Request,
@@ -79,7 +80,25 @@ export async function POST(
         status: "SUBMITTED",
         submittedAt: new Date(),
       },
+      include: {
+        submittedBy: {
+          select: { email: true, name: true },
+        },
+      },
     });
+
+    // Send confirmation email (non-blocking)
+    if (submission.submittedBy?.email) {
+      const emailContent = submissionReceivedEmail({
+        userName: submission.submittedBy.name || "",
+        systemName: submission.aiSystemName || "Untitled System",
+        submissionId: submission.id,
+      });
+      sendEmail({
+        to: submission.submittedBy.email,
+        ...emailContent,
+      }).catch((err) => console.error("Email send failed:", err));
+    }
 
     // Run the Risk Assessment Agent
     let assessment = null;

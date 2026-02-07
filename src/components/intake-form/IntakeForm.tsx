@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -29,6 +29,8 @@ interface IntakeFormProps {
 export function IntakeForm({ submissionId, initialData, status }: IntakeFormProps) {
   const router = useRouter();
   const isDraft = status === "DRAFT";
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<FormValues>({
@@ -96,23 +98,28 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
   };
 
   const handleSubmitForReview = async () => {
-    // Flush any pending auto-saves first
-    await flush();
-
-    const data = form.getValues();
-
-    // Validate with full schema for submission
-    const result = submissionSchema.safeParse(data);
-    if (!result.success) {
-      // Set errors on the form
-      result.error.issues.forEach((issue) => {
-        const path = issue.path[0] as keyof FormValues;
-        form.setError(path, { message: issue.message });
-      });
-      return;
-    }
+    setSubmitError(null);
+    setIsSubmitting(true);
 
     try {
+      // Flush any pending auto-saves first
+      await flush();
+
+      const data = form.getValues();
+
+      // Validate with full schema for submission
+      const result = submissionSchema.safeParse(data);
+      if (!result.success) {
+        // Set errors on the form
+        result.error.issues.forEach((issue) => {
+          const path = issue.path[0] as keyof FormValues;
+          form.setError(path, { message: issue.message });
+        });
+        setSubmitError("Please fill in all required fields.");
+        setIsSubmitting(false);
+        return;
+      }
+
       // First save the current data
       const saveResponse = await fetch(`/api/submissions/${submissionId}`, {
         method: "PATCH",
@@ -121,7 +128,14 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
       });
 
       if (!saveResponse.ok) {
-        throw new Error("Failed to save form data");
+        const errorData = await saveResponse.json().catch(() => ({}));
+        if (errorData.error === "Cannot edit a submitted form") {
+          // Form was already submitted (possibly from another tab)
+          setSubmitError("This form has already been submitted. Redirecting...");
+          setTimeout(() => router.push("/dashboard"), 2000);
+          return;
+        }
+        throw new Error(errorData.error || "Failed to save form data");
       }
 
       // Then submit for review
@@ -130,12 +144,16 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit for review");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to submit for review");
       }
 
       router.push("/dashboard");
     } catch (error) {
       console.error("Submit error:", error);
+      setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -159,6 +177,11 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
 
         {isDraft && (
           <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
+            {submitError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-700">{submitError}</p>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900">Ready to submit?</h3>
@@ -167,10 +190,12 @@ export function IntakeForm({ submissionId, initialData, status }: IntakeFormProp
                 </p>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={handleSaveDraft}>
+                <Button variant="outline" onClick={handleSaveDraft} disabled={isSubmitting}>
                   Save Draft
                 </Button>
-                <Button onClick={handleSubmitForReview}>Submit for Review</Button>
+                <Button onClick={handleSubmitForReview} disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Submit for Review"}
+                </Button>
               </div>
             </div>
           </div>

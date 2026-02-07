@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { canReviewSubmissions } from "@/lib/admin-auth";
+import { sendEmail, statusChangeEmail } from "@/lib/email";
 
 export async function POST(
   request: Request,
@@ -27,7 +28,12 @@ export async function POST(
 
     const submission = await prisma.aISystemSubmission.findUnique({
       where: { id },
-      include: { review: true },
+      include: {
+        review: true,
+        submittedBy: {
+          select: { email: true, name: true },
+        },
+      },
     });
 
     if (!submission) {
@@ -68,6 +74,22 @@ export async function POST(
         notes: body.notes || null,
       },
     });
+
+    // Send status change email (non-blocking)
+    if (submission.submittedBy?.email) {
+      const emailContent = statusChangeEmail({
+        userName: submission.submittedBy.name || "",
+        systemName: submission.aiSystemName || "Untitled System",
+        submissionId: submission.id,
+        oldStatus: previousStatus,
+        newStatus: "APPROVED",
+        comments: body.notes,
+      });
+      sendEmail({
+        to: submission.submittedBy.email,
+        ...emailContent,
+      }).catch((err) => console.error("Email send failed:", err));
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

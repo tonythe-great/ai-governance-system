@@ -38,8 +38,8 @@ const activityConfig: Record<
 > = {
   created: {
     icon: FileText,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
+    color: "text-[#000070]",
+    bgColor: "bg-[#000070]/10",
   },
   submitted: {
     icon: Send,

@@ -233,7 +233,7 @@ export default async function AdminDashboardPage() {
               </CardTitle>
               <Link
                 href="/admin/reviews"
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="text-sm font-medium" style={{ color: "#000070" }}
               >
                 View All
               </Link>
@@ -251,7 +251,7 @@ export default async function AdminDashboardPage() {
                   <Link
                     key={submission.id}
                     href={`/admin/reviews/${submission.id}`}
-                    className="block p-3 rounded-lg border hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                    className="block p-3 rounded-lg border hover:border-[#000070]/20 hover:bg-[#000070]/5 transition-all"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -301,7 +301,7 @@ export default async function AdminDashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="h-5 w-5 text-blue-600" />
+                <FileText className="h-5 w-5 text-[#000070]" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{submittedCount}</p>

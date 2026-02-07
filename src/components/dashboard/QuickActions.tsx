@@ -38,8 +38,9 @@ export function QuickActions({
               className={cn(
                 "w-full justify-start gap-3 h-auto py-3",
                 action.variant === "default" &&
-                  "bg-blue-600 hover:bg-blue-700 text-white"
+                  "text-white hover:opacity-90"
               )}
+              style={action.variant === "default" ? { backgroundColor: "#000070" } : undefined}
             >
               <action.icon className="h-5 w-5 flex-shrink-0" />
               <div className="text-left">
@@ -49,7 +50,7 @@ export function QuickActions({
                     className={cn(
                       "text-xs",
                       action.variant === "default"
-                        ? "text-blue-100"
+                        ? "text-white/70"
                         : "text-gray-500"
                     )}
                   >

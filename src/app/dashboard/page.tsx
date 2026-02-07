@@ -23,7 +23,7 @@ import {
 
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800 border-gray-200",
-  SUBMITTED: "bg-blue-100 text-blue-800 border-blue-200",
+  SUBMITTED: "bg-[#000070]/10 text-[#000070] border-[#000070]/20",
   UNDER_REVIEW: "bg-yellow-100 text-yellow-800 border-yellow-200",
   APPROVED: "bg-green-100 text-green-800 border-green-200",
   REJECTED: "bg-red-100 text-red-800 border-red-200",
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
       <header className="border-b bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(to bottom right, #000070, #000050)", boxShadow: "0 10px 15px -3px rgba(0, 0, 112, 0.2)" }}>
               <svg
                 className="w-5 h-5 text-white"
                 fill="none"
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold" style={{ color: "#000070" }}>
                 AI Governance
               </h1>
               <p className="text-sm text-gray-500">
@@ -260,7 +260,7 @@ export default async function DashboardPage() {
               {submissions.map((submission) => (
                 <Card
                   key={submission.id}
-                  className="hover:shadow-md transition-all hover:border-blue-200"
+                  className="hover:shadow-md transition-all hover:border-[#000070]/20"
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
@@ -294,7 +294,7 @@ export default async function DashboardPage() {
                                   ? "bg-green-500"
                                   : submission.status === "REJECTED"
                                   ? "bg-red-500"
-                                  : "bg-blue-500"
+                                  : "bg-[#000070]"
                               }`}
                               style={{
                                 width: `${statusProgress[submission.status]}%`,

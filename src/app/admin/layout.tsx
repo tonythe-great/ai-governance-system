@@ -17,7 +17,7 @@ export default async function AdminLayout({
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "#000070" }}>
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -33,7 +33,7 @@ export default async function AdminLayout({
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="text-xl font-semibold" style={{ color: "#000070" }}>
                   Admin Console
                 </h1>
                 <p className="text-sm text-gray-500">
@@ -45,7 +45,7 @@ export default async function AdminLayout({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">{session.user.email}</span>
-              <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">
+              <span className="px-2 py-1 text-xs font-medium rounded-full" style={{ backgroundColor: "rgba(0, 0, 112, 0.1)", color: "#000070" }}>
                 {userRole}
               </span>
             </div>

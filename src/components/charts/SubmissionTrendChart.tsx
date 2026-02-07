@@ -58,8 +58,8 @@ export function SubmissionTrendChart({
             >
               <defs>
                 <linearGradient id="colorSubmissions" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#000070" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#000070" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -104,7 +104,7 @@ export function SubmissionTrendChart({
                 type="monotone"
                 dataKey="submissions"
                 name="Submissions"
-                stroke="#3b82f6"
+                stroke="#000070"
                 strokeWidth={2}
                 fill="url(#colorSubmissions)"
               />
@@ -122,7 +122,7 @@ export function SubmissionTrendChart({
         {/* Legend */}
         <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#000070" }} />
             <span className="text-sm text-gray-600">Submissions</span>
           </div>
           <div className="flex items-center gap-2">

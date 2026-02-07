@@ -48,12 +48,13 @@ interface MetricCardProps {
   className?: string;
 }
 
+// Brand colors: Navy #000070, Gold #C89B00
 const colorStyles = {
   blue: {
-    bg: "bg-blue-50",
-    icon: "bg-blue-100 text-blue-600",
-    border: "border-blue-100",
-    text: "text-blue-600",
+    bg: "bg-[#000070]/5",
+    icon: "bg-[#000070]/10 text-[#000070]",
+    border: "border-[#000070]/10",
+    text: "text-[#000070]",
   },
   green: {
     bg: "bg-green-50",
@@ -62,10 +63,10 @@ const colorStyles = {
     text: "text-green-600",
   },
   yellow: {
-    bg: "bg-yellow-50",
-    icon: "bg-yellow-100 text-yellow-600",
-    border: "border-yellow-100",
-    text: "text-yellow-600",
+    bg: "bg-[#C89B00]/10",
+    icon: "bg-[#C89B00]/20 text-[#C89B00]",
+    border: "border-[#C89B00]/20",
+    text: "text-[#C89B00]",
   },
   red: {
     bg: "bg-red-50",

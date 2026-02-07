@@ -2,208 +2,382 @@ import { prisma } from "@/lib/prisma";
 import { requireReviewer } from "@/lib/admin-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-
-interface StatCardProps {
-  title: string;
-  count: number;
-  color: "blue" | "yellow" | "green" | "red" | "gray";
-  href?: string;
-}
-
-function StatCard({ title, count, color, href }: StatCardProps) {
-  const colorClasses = {
-    blue: "bg-blue-50 text-blue-700 border-blue-200",
-    yellow: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    green: "bg-green-50 text-green-700 border-green-200",
-    red: "bg-red-50 text-red-700 border-red-200",
-    gray: "bg-gray-50 text-gray-700 border-gray-200",
-  };
-
-  const content = (
-    <Card className={`border ${colorClasses[color]} ${href ? "hover:shadow-md transition-shadow cursor-pointer" : ""}`}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium opacity-80">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold">{count}</p>
-      </CardContent>
-    </Card>
-  );
-
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-
-  return content;
-}
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import { ActivityFeed, ActivityItem } from "@/components/dashboard/ActivityFeed";
+import { RiskDistributionChart } from "@/components/charts/RiskDistributionChart";
+import { SubmissionTrendChart, generateTrendData } from "@/components/charts/SubmissionTrendChart";
+import { SLABadge } from "@/components/admin/SLABadge";
+import {
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  TrendingUp,
+  Users,
+  BarChart3,
+} from "lucide-react";
 
 export default async function AdminDashboardPage() {
   await requireReviewer();
 
+  // Get status counts
   const stats = await prisma.aISystemSubmission.groupBy({
     by: ["status"],
     _count: true,
   });
 
+  // Get risk level counts
   const riskStats = await prisma.riskAssessment.groupBy({
     by: ["overallLevel"],
     _count: true,
   });
 
+  // Get all submissions for trend chart
+  const allSubmissions = await prisma.aISystemSubmission.findMany({
+    select: {
+      submittedAt: true,
+      status: true,
+    },
+    where: {
+      submittedAt: { not: null },
+    },
+    orderBy: { submittedAt: "desc" },
+  });
+
+  // Get SLA stats
+  const overdueCount = await prisma.submissionReview.count({
+    where: {
+      dueDate: { lt: new Date() },
+      submission: {
+        status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
+      },
+    },
+  });
+
+  // Calculate stats
+  const totalCount = stats.reduce((acc, s) => acc + s._count, 0);
   const submittedCount = stats.find((s) => s.status === "SUBMITTED")?._count || 0;
   const underReviewCount = stats.find((s) => s.status === "UNDER_REVIEW")?._count || 0;
   const approvedCount = stats.find((s) => s.status === "APPROVED")?._count || 0;
   const rejectedCount = stats.find((s) => s.status === "REJECTED")?._count || 0;
-  const draftCount = stats.find((s) => s.status === "DRAFT")?._count || 0;
+  const pendingCount = submittedCount + underReviewCount;
 
-  const criticalRisk = riskStats.find((s) => s.overallLevel === "CRITICAL")?._count || 0;
+  const lowRisk = riskStats.find((s) => s.overallLevel === "LOW")?._count || 0;
+  const mediumRisk = riskStats.find((s) => s.overallLevel === "MEDIUM")?._count || 0;
   const highRisk = riskStats.find((s) => s.overallLevel === "HIGH")?._count || 0;
+  const criticalRisk = riskStats.find((s) => s.overallLevel === "CRITICAL")?._count || 0;
 
-  const recentSubmissions = await prisma.aISystemSubmission.findMany({
+  // Calculate approval rate
+  const completedCount = approvedCount + rejectedCount;
+  const approvalRate = completedCount > 0
+    ? Math.round((approvedCount / completedCount) * 100)
+    : 0;
+
+  // Generate trend data
+  const trendData = generateTrendData(
+    allSubmissions.map((s) => ({
+      submittedAt: s.submittedAt,
+      status: s.status,
+    })),
+    14 // Last 14 days
+  );
+
+  // Get recent activity across all submissions
+  const recentActivity = await prisma.auditLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    include: {
+      submission: {
+        select: { aiSystemName: true },
+      },
+      performedBy: {
+        select: { name: true, email: true },
+      },
+    },
+  });
+
+  // Transform to activity items
+  const activityItems: ActivityItem[] = recentActivity.map((log) => ({
+    id: log.id,
+    action: getActivityAction(log.action),
+    description: log.submission.aiSystemName || "Untitled submission",
+    timestamp: log.createdAt,
+    user: log.performedBy.name || log.performedBy.email,
+    type: mapAuditActionToType(log.action),
+  }));
+
+  // Get urgent submissions (overdue or critical/high risk)
+  const urgentSubmissions = await prisma.aISystemSubmission.findMany({
     where: {
       status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
+      OR: [
+        {
+          riskAssessment: {
+            overallLevel: { in: ["CRITICAL", "HIGH"] },
+          },
+        },
+        {
+          review: {
+            dueDate: { lt: new Date() },
+          },
+        },
+      ],
     },
-    orderBy: { submittedAt: "asc" },
+    orderBy: [
+      { review: { priority: "desc" } },
+      { submittedAt: "asc" },
+    ],
     take: 5,
     include: {
       submittedBy: {
         select: { name: true, email: true },
       },
       riskAssessment: {
-        select: { overallLevel: true },
+        select: { overallLevel: true, overallScore: true },
+      },
+      review: {
+        select: { priority: true, dueDate: true, escalationLevel: true },
       },
     },
   });
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
-        <p className="text-gray-500 mt-1">Monitor and manage AI system submissions</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 mt-1">
+            Monitor and manage AI system submissions
+          </p>
+        </div>
+        <div className="text-sm text-gray-500">
+          Last updated: {new Date().toLocaleString()}
+        </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
-        <StatCard
-          title="Pending Review"
-          count={submittedCount}
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Submissions"
+          value={totalCount}
+          icon="FileText"
           color="blue"
+          description={`${pendingCount} pending review`}
+          href="/admin/reviews"
+        />
+        <MetricCard
+          title="Pending Review"
+          value={pendingCount}
+          icon="Clock"
+          color="yellow"
+          description={overdueCount > 0 ? `${overdueCount} overdue` : "All on track"}
           href="/admin/reviews?status=SUBMITTED"
         />
-        <StatCard
-          title="Under Review"
-          count={underReviewCount}
-          color="yellow"
-          href="/admin/reviews?status=UNDER_REVIEW"
-        />
-        <StatCard
-          title="Approved"
-          count={approvedCount}
+        <MetricCard
+          title="Approval Rate"
+          value={`${approvalRate}%`}
+          icon="CheckCircle"
           color="green"
-          href="/admin/reviews?status=APPROVED"
+          description={`${approvedCount} approved / ${completedCount} completed`}
         />
-        <StatCard
-          title="Rejected"
-          count={rejectedCount}
-          color="red"
-          href="/admin/reviews?status=REJECTED"
-        />
-        <StatCard
-          title="Drafts"
-          count={draftCount}
-          color="gray"
+        <MetricCard
+          title="High Risk Items"
+          value={criticalRisk + highRisk}
+          icon="AlertTriangle"
+          color={criticalRisk > 0 ? "red" : highRisk > 0 ? "yellow" : "green"}
+          description={
+            criticalRisk > 0
+              ? `${criticalRisk} critical, ${highRisk} high`
+              : highRisk > 0
+              ? `${highRisk} high risk`
+              : "No high-risk items"
+          }
         />
       </div>
 
-      {(criticalRisk > 0 || highRisk > 0) && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-800 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Attention Required
-            </CardTitle>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SubmissionTrendChart
+          data={trendData}
+          title="Submission Trends (14 Days)"
+        />
+        <RiskDistributionChart
+          data={{
+            low: lowRisk,
+            medium: mediumRisk,
+            high: highRisk,
+            critical: criticalRisk,
+          }}
+          title="Risk Distribution"
+        />
+      </div>
+
+      {/* Activity and Urgent Items */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ActivityFeed
+          activities={activityItems}
+          title="Recent Activity"
+          emptyMessage="No recent activity"
+          maxItems={6}
+        />
+
+        {/* Urgent Attention Card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                Needs Attention
+              </CardTitle>
+              <Link
+                href="/admin/reviews"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View All
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-orange-700">
-              {criticalRisk > 0 && <span className="font-semibold">{criticalRisk} CRITICAL</span>}
-              {criticalRisk > 0 && highRisk > 0 && " and "}
-              {highRisk > 0 && <span className="font-semibold">{highRisk} HIGH</span>}
-              {" "}risk submissions require immediate attention.
-            </p>
+            {urgentSubmissions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                <p>All caught up! No urgent items.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {urgentSubmissions.map((submission) => (
+                  <Link
+                    key={submission.id}
+                    href={`/admin/reviews/${submission.id}`}
+                    className="block p-3 rounded-lg border hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 truncate">
+                          {submission.aiSystemName || "Untitled"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {submission.submittedBy?.name || submission.submittedBy?.email}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {submission.riskAssessment && (
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              {
+                                LOW: "bg-green-100 text-green-700",
+                                MEDIUM: "bg-yellow-100 text-yellow-700",
+                                HIGH: "bg-orange-100 text-orange-700",
+                                CRITICAL: "bg-red-100 text-red-700",
+                              }[submission.riskAssessment.overallLevel]
+                            }`}
+                          >
+                            {submission.riskAssessment.overallLevel}
+                          </span>
+                        )}
+                        {submission.review && (
+                          <SLABadge
+                            submittedAt={submission.submittedAt}
+                            dueDate={submission.review.dueDate}
+                            riskLevel={submission.riskAssessment?.overallLevel || null}
+                            escalationLevel={submission.review.escalationLevel}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Recent Submissions Awaiting Review</CardTitle>
-            <Link
-              href="/admin/reviews"
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              View All
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {recentSubmissions.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              No submissions awaiting review
-            </p>
-          ) : (
-            <div className="divide-y">
-              {recentSubmissions.map((submission) => (
-                <Link
-                  key={submission.id}
-                  href={`/admin/reviews/${submission.id}`}
-                  className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-4 px-4 transition-colors"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {submission.aiSystemName || "Untitled"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {submission.submittedBy?.name || submission.submittedBy?.email}
-                      {submission.submittedAt && (
-                        <span className="ml-2">
-                          {new Date(submission.submittedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {submission.riskAssessment && (
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          {
-                            LOW: "bg-green-100 text-green-700",
-                            MEDIUM: "bg-yellow-100 text-yellow-700",
-                            HIGH: "bg-orange-100 text-orange-700",
-                            CRITICAL: "bg-red-100 text-red-700",
-                          }[submission.riskAssessment.overallLevel]
-                        }`}
-                      >
-                        {submission.riskAssessment.overallLevel}
-                      </span>
-                    )}
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        submission.status === "SUBMITTED"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {submission.status === "SUBMITTED" ? "Pending" : "In Review"}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+      {/* Quick Stats Footer */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{submittedCount}</p>
+                <p className="text-sm text-gray-500">Pending</p>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-yellow-50 to-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{underReviewCount}</p>
+                <p className="text-sm text-gray-500">In Review</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-green-50 to-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{approvedCount}</p>
+                <p className="text-sm text-gray-500">Approved</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-50 to-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{rejectedCount}</p>
+                <p className="text-sm text-gray-500">Rejected</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
+}
+
+function getActivityAction(action: string): string {
+  const actions: Record<string, string> = {
+    CREATED: "New submission created",
+    UPDATED: "Submission updated",
+    SUBMITTED: "Submitted for review",
+    APPROVED: "Submission approved",
+    REJECTED: "Submission rejected",
+    CHANGES_REQUESTED: "Changes requested",
+    COMMENT_ADDED: "Comment added",
+    ESCALATED: "Submission escalated",
+  };
+  return actions[action] || action;
+}
+
+function mapAuditActionToType(action: string): ActivityItem["type"] {
+  const mapping: Record<string, ActivityItem["type"]> = {
+    CREATED: "created",
+    UPDATED: "updated",
+    SUBMITTED: "submitted",
+    APPROVED: "approved",
+    REJECTED: "rejected",
+    CHANGES_REQUESTED: "changes_requested",
+    COMMENT_ADDED: "comment",
+    ESCALATED: "escalated",
+  };
+  return mapping[action] || "updated";
 }

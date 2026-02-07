@@ -24,6 +24,13 @@ const statusLabels: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
+const riskLevelColors: Record<string, string> = {
+  LOW: "bg-green-100 text-green-700",
+  MEDIUM: "bg-yellow-100 text-yellow-700",
+  HIGH: "bg-orange-100 text-orange-700",
+  CRITICAL: "bg-red-100 text-red-700",
+};
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -44,6 +51,12 @@ export default async function DashboardPage() {
       createdAt: true,
       updatedAt: true,
       submittedAt: true,
+      riskAssessment: {
+        select: {
+          overallLevel: true,
+          overallScore: true,
+        },
+      },
     },
   });
 
@@ -133,20 +146,29 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid gap-4">
             {submissions.map((submission) => (
-              <Link key={submission.id} href={`/intake/${submission.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">
-                          {submission.aiSystemName || "Untitled Assessment"}
-                        </CardTitle>
-                        <CardDescription>
-                          {submission.vendor
-                            ? `Vendor: ${submission.vendor}`
-                            : "No vendor specified"}
-                        </CardDescription>
-                      </div>
+              <Card key={submission.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {submission.aiSystemName || "Untitled Assessment"}
+                      </CardTitle>
+                      <CardDescription>
+                        {submission.vendor
+                          ? `Vendor: ${submission.vendor}`
+                          : "No vendor specified"}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {submission.riskAssessment && (
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            riskLevelColors[submission.riskAssessment.overallLevel]
+                          }`}
+                        >
+                          {submission.riskAssessment.overallLevel} Risk
+                        </span>
+                      )}
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           statusColors[submission.status]
@@ -155,8 +177,10 @@ export default async function DashboardPage() {
                         {statusLabels[submission.status]}
                       </span>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span>
                         Created:{" "}
@@ -173,9 +197,23 @@ export default async function DashboardPage() {
                         </span>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/intake/${submission.id}`}>
+                        <Button variant="outline" size="sm">
+                          {submission.status === "DRAFT" ? "Edit" : "View"}
+                        </Button>
+                      </Link>
+                      {submission.riskAssessment && (
+                        <Link href={`/submissions/${submission.id}/assessment`}>
+                          <Button variant="outline" size="sm">
+                            View Risk
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

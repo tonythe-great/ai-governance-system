@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { submissionSchema } from "@/lib/validations/submission";
+import { runRiskAssessment } from "@/lib/agents/risk-assessment";
 
 export async function POST(
   request: Request,
@@ -80,7 +81,19 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(submission);
+    // Run the Risk Assessment Agent
+    let assessment = null;
+    try {
+      assessment = await runRiskAssessment(submission);
+    } catch (assessmentError) {
+      console.error("Risk assessment error (non-blocking):", assessmentError);
+      // Don't fail the submission if assessment fails
+    }
+
+    return NextResponse.json({
+      ...submission,
+      riskAssessment: assessment,
+    });
   } catch (error) {
     console.error("Submit submission error:", error);
     return NextResponse.json(

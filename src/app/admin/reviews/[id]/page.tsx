@@ -7,6 +7,7 @@ import { ReviewActions } from "@/components/admin/ReviewActions";
 import { CommentThread } from "@/components/admin/CommentThread";
 import { ReviewHistory } from "@/components/admin/ReviewHistory";
 import { AuditTrail } from "@/components/admin/AuditTrail";
+import { DownloadPDFButton } from "@/components/admin/DownloadPDFButton";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -97,11 +98,14 @@ export default async function SubmissionReviewPage({ params }: ReviewPageProps) 
             )}
           </p>
         </div>
-        <ReviewActions
-          submissionId={id}
-          currentStatus={submission.status}
-          reviewId={submission.review?.id}
-        />
+        <div className="flex items-center gap-3">
+          <DownloadPDFButton submissionId={id} />
+          <ReviewActions
+            submissionId={id}
+            currentStatus={submission.status}
+            reviewId={submission.review?.id}
+          />
+        </div>
       </div>
 
       {submission.riskAssessment && (

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logFormUpdate } from "@/lib/audit";
 
 export async function GET(
   request: Request,
@@ -100,33 +101,40 @@ export async function PATCH(
       incidentResponseDoc,
     } = body;
 
+    const updateData = {
+      aiSystemName,
+      useCase,
+      businessPurpose,
+      vendor,
+      currentStage,
+      numberOfUsers,
+      outputUsage,
+      humanReviewLevel,
+      dataTypes,
+      vendorDataStorage,
+      userTrainingRequired,
+      acceptableUseRequired,
+      executiveSponsorName,
+      executiveSponsorTitle,
+      businessOwnerName,
+      businessOwnerEmail,
+      technicalOwnerName,
+      technicalOwnerEmail,
+      hasFederalContracts,
+      usageLoggingEnabled,
+      complianceAccess,
+      incidentResponseDoc,
+    };
+
     const submission = await prisma.aISystemSubmission.update({
       where: { id },
-      data: {
-        aiSystemName,
-        useCase,
-        businessPurpose,
-        vendor,
-        currentStage,
-        numberOfUsers,
-        outputUsage,
-        humanReviewLevel,
-        dataTypes,
-        vendorDataStorage,
-        userTrainingRequired,
-        acceptableUseRequired,
-        executiveSponsorName,
-        executiveSponsorTitle,
-        businessOwnerName,
-        businessOwnerEmail,
-        technicalOwnerName,
-        technicalOwnerEmail,
-        hasFederalContracts,
-        usageLoggingEnabled,
-        complianceAccess,
-        incidentResponseDoc,
-      },
+      data: updateData,
     });
+
+    // Log form changes to audit trail (non-blocking)
+    logFormUpdate(id, userId!, existing as Record<string, unknown>, updateData).catch(
+      (err) => console.error("Audit log failed:", err)
+    );
 
     return NextResponse.json(submission);
   } catch (error) {

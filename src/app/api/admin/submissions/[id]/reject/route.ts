@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { canReviewSubmissions } from "@/lib/admin-auth";
 import { sendEmail, statusChangeEmail } from "@/lib/email";
+import { logStatusChange } from "@/lib/audit";
 
 export async function POST(
   request: Request,
@@ -81,6 +82,11 @@ export async function POST(
         notes: body.notes,
       },
     });
+
+    // Log to audit trail (non-blocking)
+    logStatusChange(id, userId!, "REJECTED", previousStatus, "REJECTED", body.notes).catch(
+      (err) => console.error("Audit log failed:", err)
+    );
 
     // Send status change email (non-blocking)
     if (submission.submittedBy?.email) {

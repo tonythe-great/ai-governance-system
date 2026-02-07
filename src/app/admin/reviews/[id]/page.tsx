@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReviewActions } from "@/components/admin/ReviewActions";
 import { CommentThread } from "@/components/admin/CommentThread";
 import { ReviewHistory } from "@/components/admin/ReviewHistory";
+import { AuditTrail } from "@/components/admin/AuditTrail";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -242,6 +243,7 @@ export default async function SubmissionReviewPage({ params }: ReviewPageProps) 
             reviewId={submission.review?.id}
             comments={submission.review?.comments || []}
           />
+          <AuditTrail submissionId={id} />
           <ReviewHistory actions={submission.review?.actions || []} />
         </div>
       </div>

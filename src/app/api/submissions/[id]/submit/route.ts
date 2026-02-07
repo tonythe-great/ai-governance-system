@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { submissionSchema } from "@/lib/validations/submission";
 import { runRiskAssessment } from "@/lib/agents/risk-assessment";
 import { sendEmail, submissionReceivedEmail } from "@/lib/email";
+import { logSubmissionSubmitted } from "@/lib/audit";
 
 export async function POST(
   request: Request,
@@ -86,6 +87,11 @@ export async function POST(
         },
       },
     });
+
+    // Log to audit trail (non-blocking)
+    logSubmissionSubmitted(id, userId!, submission.aiSystemName || undefined).catch(
+      (err) => console.error("Audit log failed:", err)
+    );
 
     // Send confirmation email (non-blocking)
     if (submission.submittedBy?.email) {

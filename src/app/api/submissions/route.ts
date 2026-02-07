@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logSubmissionCreated } from "@/lib/audit";
 
 export async function GET() {
   try {
@@ -53,6 +54,11 @@ export async function POST() {
         submittedById: userId,
       },
     });
+
+    // Log audit trail (non-blocking)
+    logSubmissionCreated(submission.id, userId!).catch((err) =>
+      console.error("Audit log failed:", err)
+    );
 
     return NextResponse.json(submission);
   } catch (error) {

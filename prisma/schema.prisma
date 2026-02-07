@@ -31,6 +31,7 @@ model User {
   assignedReviews SubmissionReview[] @relation("ReviewerAssignments")
   reviewComments  ReviewComment[]
   reviewActions   ReviewAction[]
+  auditLogs       AuditLog[]
 }
 
 model AISystemSubmission {
@@ -81,6 +82,9 @@ model AISystemSubmission {
 
   // Submission Review
   review                  SubmissionReview?
+
+  // Audit Trail
+  auditLogs               AuditLog[]
 
   @@index([submittedById])
   @@index([status])
@@ -191,5 +195,40 @@ model ReviewAction {
 
   @@index([reviewId])
   @@index([performedById])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  submissionId    String
+  submission      AISystemSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // Actor information
+  performedById   String
+  performedBy     User     @relation(fields: [performedById], references: [id])
+
+  // Action details
+  action          String   // CREATED, UPDATED, SUBMITTED, APPROVED, REJECTED, CHANGES_REQUESTED, COMMENT_ADDED
+  category        String   // LIFECYCLE, STATUS_CHANGE, FORM_EDIT, COMMENT
+
+  // Status tracking (for status changes)
+  previousStatus  String?
+  newStatus       String?
+
+  // Field tracking (for form edits)
+  fieldName       String?
+  previousValue   String?  @db.Text
+  newValue        String?  @db.Text
+
+  // Additional details
+  description     String?
+  metadata        Json?    // For storing additional structured data
+
+  createdAt       DateTime @default(now())
+
+  @@index([submissionId])
+  @@index([performedById])
+  @@index([action])
+  @@index([category])
   @@index([createdAt])
 }
